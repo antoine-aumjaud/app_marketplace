@@ -1,0 +1,32 @@
+{
+    "TOOLS": {
+        "name": "Tools",
+        "apps": [
+            {
+                "code": "7z",
+                "name": "7-zip",
+                "description": "Unzip tools",
+                "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f2/7ziplogo.svg/langfr-220px-7ziplogo.svg.png",
+                "documentationUrl": "https://7-zip.org/",
+                "isProduction": true
+            },
+            {
+                "code": "rclone",
+                "name": "R Clone",
+                "description": "R clone contains rsync tool",
+                "imageUrl": "https://rclone.org/img/logo_on_light__horizontal_color.svg",
+                "documentationUrl": "https://rclone.org/",
+                "isProduction": false
+            }
+        ]
+    },
+    "GBSU": {
+        "name": "GBSU",
+        "apps": [
+        ]
+    },
+    "ITFS": {
+        "name": "ITFS"
+        
+    }
+}
