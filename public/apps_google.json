@@ -1,0 +1,14 @@
+[
+    {
+        "code": "matter",
+        "name": "Matter",
+        "description": "Google Home Sample App for Matter",
+        "imageUrl": "https://developers.home.google.com/static/images/matter-fabric.png",
+        "documentationUrl": "https://developers.home.google.com/samples/matter-app",
+        "isProduction": false,
+        "tools": [ "7z" ],
+        "installUri": "",
+        "versionUri": "",
+        "launchCommand": ""
+    }
+]

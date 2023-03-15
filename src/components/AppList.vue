@@ -3,6 +3,7 @@ const props = defineProps({
   apps: Array,
   favorites: Array,
 })
+
 const emit = defineEmits(['changeFavorites', 'showApp', 'openApp']);
 
 function setFavorites(app) {
@@ -62,7 +63,8 @@ td.name {
   padding-left: 10px;
 }
 td.name:hover {
-  text-decoration: underline;
+  background-color: #396bd856;
+
 }
 
 img.fav {
@@ -77,6 +79,10 @@ img.fav.activated {
 }
 
 img.open {
+  cursor: pointer;
   width: 20px;
+}
+img.open:hover {
+  background-color: #396bd856;
 }
 </style>

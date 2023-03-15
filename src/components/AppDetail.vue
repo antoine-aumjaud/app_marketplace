@@ -1,39 +1,42 @@
 <script setup>
+import { confirm } from '@tauri-apps/api/dialog';
+
 const props = defineProps({
   app: Object,
 })
 
-const emit = defineEmits(['openApp']);
+const emit = defineEmits(['openApp', 'deleteApp']);
 
-function openApp(app) {
-  emit("openApp", app);
+function openApp() {
+  emit("openApp", props.app);
 }
-
+async function deleteApp() {
+  const confirmed = await confirm('Are you sure you want to remove this application?', { title: 'Validation' });
+  if(confirmed) {
+    emit("deleteApp", props.app);
+  }
+}
 </script>
 
 <template>
-  <img class="open" 
-    @click="openApp(app)"
-    src="../assets/open.png" 
-    alt="Open" /> 
   <h2>{{ app.name }}</h2>
   <div v-if="app.imageUrl">
-    <img class="logo" :src="app.imageUrl">
+    <img :src="app.imageUrl">
   </div>
   <div v-if="app.description">
     {{ app.description }}
   </div>
-  <div v-if="app.documentationUrl">
-    <a :href="app.documentationUrl" target="_blank">{{ app.documentationUrl }}</a>
+  <br>
+  <div>
+    <button @click="openApp">Open</button> 
+    <button @click="deleteApp">Delete</button>
+    <a :href="app.documentationUrl" target="_blank">
+      <button>Documentation</button></a> 
   </div>
 </template>
 
 <style scoped>
-img.logo {
-  width: 100px;
-}
-
-img.open {
+img {
   width: 100px;
 }
 </style>

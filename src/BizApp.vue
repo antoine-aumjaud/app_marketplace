@@ -7,21 +7,29 @@ import AppList   from "./components/AppList.vue";
 import AppDetail from './components/AppDetail.vue';
 
 //apps
-const apps = ref([])
+const apps = ref({})
 async function initApps() {
   console.debug("init apps");
-  apps.value = await (await fetch("/apps.json")).json();
+  const appsJson = await (await fetch("/apps.json")).json();
+  for(const entity of Object.values(appsJson).filter(entity => entity.appsUrl != null)) {
+    try {
+      entity.apps = await (await fetch(entity.appsUrl)).json();
+    }
+    catch(e) {
+      console.error("Can't load " + entity.appsUrl, e);
+    }
+  }
+  apps.value = appsJson;
 }
 
-//entities
+//filter entities
 const entitySelected = ref("");
 const entities = computed({
   get() {
     return Object.keys(apps.value)
-      //.filter( key => key != "TOOLS")
       .map( key =>  { return {value: key, text: apps.value[key].name }; } );
   }
-})
+});
 function initEntity() {
   entitySelected.value = localStorage.getItem("entitySelected"); 
 }
@@ -30,7 +38,7 @@ function selectEntity(event) {
   computeApps();
 }
 
-//favorites
+//filter favorites
 const viewOnlyFavorites = ref(false);
 const favorites = ref([]);
 function initFavorites() {
@@ -47,7 +55,7 @@ function changeFavorites() {
   computeApps();
 }
 
-//production
+//filter production
 const viewOnlyProduction = ref(true);
 async function initProduction() {
   viewOnlyProduction.value = localStorage.getItem("viewOnlyProduction") || true;
@@ -57,7 +65,7 @@ function checkViewOnlyProduction(event) {
   computeApps();
 }
 
-//search
+//filter search
 const searchFilter = ref("");
 const computedApps = ref([])
 function computeApps() {
@@ -94,11 +102,35 @@ function showApp(app) {
   selectedApp.value = app;
 }
 async function openApp(app) {
-  console.info(await invoke("greet", { name: app.code }));
+  const appsToInstall = [];
+  //check tools
+  if(app.tools) for(const tool of app.tools) {
+    const toolApp = apps.value.filter["tools"].filter(a => a.name === tool);
+    const localVersion = await invoke("get_app_file_version", { appCode: toolApp.code });
+    const remoteVersion = await(await fetch(toolApp.versionUri)).json();
+    console.debug(`Tool '${toolApp.code}': versions ${localVersion}/${remoteVersion}`);
+    if(remoteVersion != localVersion) appsToInstall.push(toolApp.installUri);
+  }
+  //check app
+  const localVersion = await invoke("get_app_file_version", { app_code: app.code });
+  const remoteVersion = await(await fetch(app.versionUri)).json();
+  console.debug(`App '${app.code}': versions ${localVersion}/${remoteVersion}`);
+  if(remoteVersion != localVersion) appsToInstall.push(app.installUri);
+  //installations
+  for(const appToInstall of appsToInstall) {
+    console.info("install app", app.installUri, 
+      await invoke("install_app", { installUri: app.installUri }));
+  }
+  //launch app
+  console.info("launch_app", app.launchCommand, 
+    await invoke("launch_app", { command: app.launchCommand }));
 }
-
+async function deleteApp(app) {
+  console.info("delete_app", app.code, 
+    await invoke("delete_app", { app: app.code }));
+}
 //init
-onMounted( async () => {
+onMounted(async () => {
   await initApps();
   initEntity();
   initProduction();
@@ -110,7 +142,7 @@ onMounted( async () => {
 
 <template>
   <div class="container">
-    <h1>Welcome to BuzApp!</h1>
+    <h1>BizApp: the Business Applications market place!</h1>
 
     <div class="row">
       <div class="col">
@@ -122,7 +154,7 @@ onMounted( async () => {
       </div>
 
       <div class="col search">
-        <input  id="searchInput" v-model="searchFilter" placeholder="Filter by name" @input="computeApps">
+        <input id="searchInput" v-model="searchFilter" placeholder="Filter by name" @input="computeApps">
       </div>
 
       <div class="col">
@@ -141,14 +173,15 @@ onMounted( async () => {
           :apps="computedApps" 
           :favorites="favorites"
           @changeFavorites="changeFavorites" 
-          @showApp="showApp"
           @openApp="openApp"
+          @showApp="showApp"
           />
       </div>
       <div class="col detail">
         <AppDetail v-if="selectedApp"
           :app="selectedApp" 
           @openApp="openApp"
+          @deleteApp="deleteApp"
         />
       </div>
     </div>

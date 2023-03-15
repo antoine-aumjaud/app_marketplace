@@ -1,5 +1,5 @@
 import { createApp } from "vue";
 import "./styles.css";
-import BuzApp from "./BuzApp.vue";
+import BizApp from "./BizApp.vue";
 
-createApp(BuzApp).mount("#app");
+createApp(BizApp).mount("#app");
