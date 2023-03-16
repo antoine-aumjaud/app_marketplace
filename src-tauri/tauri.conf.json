@@ -15,10 +15,24 @@
       "all": false,
       "shell": {
         "all": false,
-        "open": true
+        "open": true,
+        "execute": true
       },
       "dialog": {
         "all": true 
+      },
+      "fs": {
+        "scope": ["$HOME/*"],
+        "all": false, 
+        "readFile": true,
+        "writeFile": true,
+        "readDir": false,
+        "copyFile": false,
+        "createDir": false,
+        "removeDir": true,
+        "removeFile": false,
+        "renameFile": false,
+        "exists": true
       }
     },
     "bundle": {

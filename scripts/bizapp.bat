@@ -1,7 +1,7 @@
 @echo off
 
 set TARGET_PATH=%USERPROFILE%\bin\bizapp
-set TARGET_PATH_APPS=%TARGET_PATH%\apps
+set TARGET_PATH_APPS=%USERPROFILE%\bin\bizapp\apps
 
 set BIN_URL=file:///c:/Users/antoi/prog/bizapp/src-tauri/target/release/bizapp.exe
 set BAT_URL=file:///c:/Users/antoi/prog/bizapp/script/bizapp.bat
@@ -13,6 +13,7 @@ if not exist %TARGET_PATH% (goto copy_bin) else (goto check_bin_version)
 :copy_bin
 echo -- Create path %TARGET_PATH%
 mkdir %TARGET_PATH% > nul 2>&1
+mkdir %TARGET_PATH_APPS% > nul 2>&1
 echo -- Get batch file
 curl --failed -ksS -o %TARGET_PATH%\bizapp.bat %BAT_URL%
 if %errorlevel% neq 0 (goto error)
@@ -39,7 +40,7 @@ if %errorlevel% neq 0 (goto error)
 
 :launch_app
 echo -- Launch application
-start %USERPROFILE%/bin/bizapp/bizapp.exe %TARGET_PATH_APPS%
+start %USERPROFILE%/bin/bizapp/bizapp.exe
 goto :EOF
 
 :error

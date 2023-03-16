@@ -1,7 +1,7 @@
 <script setup>
-import { invoke } from "@tauri-apps/api/tauri";
-
 import { ref, computed, onMounted } from 'vue'
+
+import { installApplication, isApplicationInstalled, openApplication, removeApplication } from './application';
 
 import AppList   from "./components/AppList.vue";
 import AppDetail from './components/AppDetail.vue';
@@ -57,7 +57,7 @@ function changeFavorites() {
 
 //filter production
 const viewOnlyProduction = ref(true);
-async function initProduction() {
+function initProduction() {
   viewOnlyProduction.value = localStorage.getItem("viewOnlyProduction") || true;
 }
 function checkViewOnlyProduction(event) {
@@ -102,33 +102,29 @@ function showApp(app) {
   selectedApp.value = app;
 }
 async function openApp(app) {
-  const appsToInstall = [];
-  //check tools
-  if(app.tools) for(const tool of app.tools) {
-    const toolApp = apps.value.filter["tools"].filter(a => a.name === tool);
-    const localVersion = await invoke("get_app_file_version", { appCode: toolApp.code });
-    const remoteVersion = await(await fetch(toolApp.versionUri)).json();
-    console.debug(`Tool '${toolApp.code}': versions ${localVersion}/${remoteVersion}`);
-    if(remoteVersion != localVersion) appsToInstall.push(toolApp.installUri);
+  const isInstalled = await installApplication(apps, app);
+  if(!isInstalled) {
+    if(await isApplicationInstalled(app)) {
+      const confirmed = await confirm("Installation failed, do you want to run the previous installation?");
+      if(confirmed) {
+        await openApplication(app);
+      }
+    }
+  } 
+  else {
+    await openApplication(app);
   }
-  //check app
-  const localVersion = await invoke("get_app_file_version", { app_code: app.code });
-  const remoteVersion = await(await fetch(app.versionUri)).json();
-  console.debug(`App '${app.code}': versions ${localVersion}/${remoteVersion}`);
-  if(remoteVersion != localVersion) appsToInstall.push(app.installUri);
-  //installations
-  for(const appToInstall of appsToInstall) {
-    console.info("install app", app.installUri, 
-      await invoke("install_app", { installUri: app.installUri }));
-  }
-  //launch app
-  console.info("launch_app", app.launchCommand, 
-    await invoke("launch_app", { command: app.launchCommand }));
 }
 async function deleteApp(app) {
-  console.info("delete_app", app.code, 
-    await invoke("delete_app", { app: app.code }));
+  const isInstalled = await isApplicationInstalled(app);
+  if(isInstalled) {
+    const confirmed = await confirm('Are you sure you want to remove this application?', { title: 'Validation' });
+    if(confirmed) {
+      await removeApplication(app);
+    }
+  }
 }
+
 //init
 onMounted(async () => {
   await initApps();
@@ -137,7 +133,6 @@ onMounted(async () => {
   initFavorites();
   computeApps();
 });
-
 </script>
 
 <template>

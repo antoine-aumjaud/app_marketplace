@@ -1,6 +1,4 @@
 <script setup>
-import { confirm } from '@tauri-apps/api/dialog';
-
 const props = defineProps({
   app: Object,
 })
@@ -10,11 +8,8 @@ const emit = defineEmits(['openApp', 'deleteApp']);
 function openApp() {
   emit("openApp", props.app);
 }
-async function deleteApp() {
-  const confirmed = await confirm('Are you sure you want to remove this application?', { title: 'Validation' });
-  if(confirmed) {
-    emit("deleteApp", props.app);
-  }
+function deleteApp() {
+  emit("deleteApp", props.app);
 }
 </script>
 
