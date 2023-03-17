@@ -6,9 +6,9 @@
         "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f2/7ziplogo.svg/langfr-220px-7ziplogo.svg.png",
         "documentationUrl": "https://7-zip.org/",
         "isProduction": false,
-        "installUri": "https://www.7-zip.org/a/7z2201-extra.7z",
-        "versionUri": "/test_version",
-        "launchCommand": "7z.bat",
+        "installUri": "/src/assets/test_install.bat",
+        "versionUri": "/src/assets/test_version.txt",
+        "launchCommand": "launch.bat",
         "env": "PROD"
     },
     {
@@ -18,8 +18,9 @@
         "imageUrl": "https://rclone.org/img/logo_on_light__horizontal_color.svg",
         "documentationUrl": "https://rclone.org/",
         "isProduction": false,
-        "installUri": "https://www.7-zip.org/a/7z2201-extra.7z",
-        "versionUri": "/test_version",
-        "launchCommand": null
+        "installUri": "/src/assets/test_install.bat",
+        "versionUri": "/src/assets/test_version.txt",
+        "deps": ["tools.7z"],
+        "launchCommand": "launch.bat"
     }
 ]

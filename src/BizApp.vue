@@ -107,16 +107,18 @@ async function showApp(app) {
   selectedApp.value = app;
 }
 async function openApp(app) {
-  let openTheApp=false;
-  const isInstalled = await installApplication(apps, app);
-  
-  if(!isInstalled) {
+  let openTheApp = false;
+  try {
+    await installApplication(apps, app);
+    openTheApp = true;
+  }
+  catch(e) {
     if(await isApplicationInstalled(app)) { //application has a previous installation
         openTheApp = await confirm("Installation failed!\nDo you want to run the previous installation?", { title: 'Open application', type: 'warning' });
     }
-  } 
-  else {
-    openTheApp = true;
+    else {
+      await message(e, { title: 'Install application', type: 'error' });
+    }
   }
   if(openTheApp) {
     try {

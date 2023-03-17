@@ -3,6 +3,7 @@
 
 // Learn more about Tauri commands at https://tauri.app/v1/guides/features/command
 
+use std::collections::HashMap;
 use std::path::Path;
 use std::fs;
 use std::env;
@@ -30,7 +31,7 @@ fn get_url_content(url: String) -> String {
     return match ureq::get(&url)
         .call() {
             Ok(response) => { 
-                response.into_string().unwrap() 
+                format!("{}-|-{}", response.status(), response.into_string().unwrap()) 
             },
             Err(ureq::Error::Status(code, response)) => {
                 format!("{}-|-{}", code, response.into_string().unwrap())
@@ -41,11 +42,33 @@ fn get_url_content(url: String) -> String {
         };
 }
 
+#[tauri::command]
+fn get_local_file_content(path: String) -> String {
+    return match fs::read_to_string(path) {
+        Ok(content) => { 
+            content.to_string()
+        },
+        Err(error) => {
+            format!("error: {}", error.to_string())
+        }
+    };
+}
+
+#[tauri::command]
+fn save_local_file_content(path: String, content: String) -> String {
+    return match fs::write(path, content) {
+        Ok(_) => "true".to_string(),
+        Err(error) => {
+            format!("error: {}", error.to_string())
+        }
+    };
+}
 
 #[tauri::command]
 fn is_path_exist(path: String) -> bool {
     return Path::new(&path).exists();
 }
+
 #[tauri::command]
 fn delete_file(path: String) -> bool {
     return fs::remove_file(&path).is_ok();
@@ -55,23 +78,27 @@ fn delete_dir(path: String) -> bool {
     return fs::remove_dir_all(&path).is_ok();
 }
 #[tauri::command]
-fn launch(path: String, command: String, args: Vec<String>) -> String {
-    let output = Command::new(command)
+fn create_dir(path: String) -> bool {
+    return fs::create_dir(&path).is_ok();
+}
+
+#[tauri::command]
+fn launch(path: String, command: String, args: Vec<String>, vars: HashMap<String, String>) -> String {
+    return match Command::new(command)
         .args(args)
         .current_dir(path)
-        .output();
-
-    match output {
+        .envs(vars)
+        .output() {
             Ok(content) => { 
-                return format!("{}-|-{}-|-{}", 
-                    content.status.success(), 
+                format!("{}-|-{}-|-{}", 
+                    content.status.success(), //always true ?
                     String::from_utf8_lossy(&content.stdout), 
-                    String::from_utf8_lossy(&content.stderr));
+                    String::from_utf8_lossy(&content.stderr))
             },
             Err(error) => { 
-                return format!("false-|- -|-{}", error.to_string()); 
+                format!("false-|- -|-{}", error.to_string()) 
             }
-    };
+        };
 }
 
 fn main() {
@@ -90,9 +117,9 @@ fn main() {
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
             get_target_path, get_apps_url, 
-            get_url_content,
+            get_url_content, get_local_file_content, save_local_file_content,
             is_path_exist, 
-            delete_file, delete_dir, 
+            delete_file, delete_dir, create_dir,
             launch])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
