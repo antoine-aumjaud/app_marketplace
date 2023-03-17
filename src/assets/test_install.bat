@@ -1,9 +1,9 @@
-env
-
+@echo off
 echo .
 
 echo %CD%
 echo %APPS_PATH%
 echo %APP_PATH%
 
-echo coucou > %APP_PATH%/launch.bat 
+md "%APP_PATH%"
+echo echo coucou > "%APP_PATH%/launch.bat"

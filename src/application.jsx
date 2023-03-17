@@ -69,7 +69,7 @@ async function install(apps, targetApp) {
         }
         try {
             vars["APP_PATH"] = appPath;
-            await launch("C:\\Users\\antoi\\bin", installScriptPath, vars);
+            await launch(await getTargetPath(), installScriptPath, vars);
         }
         catch(e) {
             throw Error("Can't install application " + app.name + ", message: " + e);
@@ -147,16 +147,9 @@ async function launch(path, launchCommand, vars) {
     const out = await invoke("launch", { path: path, command: command, args: args, vars: vars });
     const outSplit = out.split("-|-"); //internal protocol: status-|-stdout-|-stderr
     console.info("launch", path, command, args, vars);
-    if(outSplit[0] === "true") {
-        console.info("launch output", outSplit[1]);
-        if(outSplit[2].trim().length > 0) {
-            console.info("launch error", outSplit[2]);
-        }
-    }
-    else {
-        if(outSplit[2].trim().length > 0) {
-            console.info("launch error", outSplit[2]);
-        }
+    if(outSplit[1].trim().length > 0) console.info("launch output: ",       outSplit[1]);
+    if(outSplit[2].trim().length > 0) console.info("launch error output: ", outSplit[2]);
+    if(outSplit[0] !== "true") { 
         throw Error("Can't launch " + launchCommand);
     }
 }

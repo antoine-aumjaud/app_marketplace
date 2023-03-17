@@ -91,7 +91,7 @@ fn launch(path: String, command: String, args: Vec<String>, vars: HashMap<String
         .output() {
             Ok(content) => { 
                 format!("{}-|-{}-|-{}", 
-                    content.status.success(), //always true ?
+                    content.status.success(), 
                     String::from_utf8_lossy(&content.stdout), 
                     String::from_utf8_lossy(&content.stderr))
             },
@@ -109,7 +109,7 @@ fn main() {
         panic!("Missing APPS_URL: URL to apps list, use icon in Start Menu to launch this application");
     }
 
-    println!("Works with {} in {}",
+    println!("Works with {}\n in {}",
         env::var("APPS_URL").unwrap(),
         env::var("APPS_PATH").unwrap()
     );
