@@ -8,7 +8,8 @@
         "isProduction": false,
         "installUri": "https://www.7-zip.org/a/7z2201-extra.7z",
         "versionUri": "/test_version",
-        "launchCommand": null
+        "launchCommand": "7z.bat",
+        "env": "PROD"
     },
     {
         "code": "rclone",

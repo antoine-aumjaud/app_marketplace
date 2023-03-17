@@ -1,17 +1,5 @@
 import { invoke } from "@tauri-apps/api/tauri";
-import { BaseDirectory, exists, removeDir } from '@tauri-apps/api/fs';
-import { Command } from "@tauri-apps/api/shell";
 
-
-async function readEnvVariable(variableName) {
-    const commandResult = await new Command("cmd", [ "/c", "set", variableName]).execute();
-    if (commandResult.code !== 0) {
-      throw new Error(commandResult.stderr);
-    }
-    const out = commandResult.stdout;
-    const outSplit = out.split("=");
-    return (outSplit.length > 0) ? outSplit[1] : null; 
-}
 let _targetPath = null;
 async function getTargetPath() {
     if(_targetPath == null) {
@@ -19,9 +7,35 @@ async function getTargetPath() {
     }
     return _targetPath;
 }
+async function getAppsUrl() {
+    return await invoke("get_apps_url");
+}
+
+async function getUrlContent(url) {
+    console.debug("fetch", url);
+    if(url.startsWith("https://")) {
+        return await invoke("get_url_content", {url: url});
+    }
+    else {
+        return await (await fetch(url)).text();
+    }
+}
+async function getUrlContentJson(url) {
+    try {
+        const content = await getUrlContent(url);
+        return JSON.parse(content);
+    }
+    catch(e) {
+        console.error("Can't get content of " + url, e);
+        return null;
+    }
+}
 
 async function install(apps, app) {
     try {
+//manage tools in tools
+//if folder doest exist at the end check app.uninstall & create it
+//add version in loval
         const appsToInstall = [];
         //check tools
         if(app.tools) for(const tool of app.tools) {
@@ -49,29 +63,60 @@ async function install(apps, app) {
 }
 
 async function open(app) {
-    try {
-        console.info("open", app.launchCommand,
-            await new Command(app.launchCommand, [], { dir: await getTargetPath() }).execute());
-    } catch (e) {
-        console.error("open", app.launchCommand, e);
+    const pathApp = await getTargetPath() + '/' + app.code;
+    let command = app.launchCommand;
+    let args = [];
+    if(command.includes(" ")) {
+        const commandSplit = command.split(" ");
+        command = commandSplit[0];
+        args = commandSplit.slice(1);
+    }
+    if(command.endsWith(".bat") || command.endsWith(".cmd")) {
+        command = "cmd";
+        args = ["/c", app.launchCommand]; //all args in first arg
+    }
+    const out = await invoke("launch", { path: pathApp, command: command, args: args });
+    const outSplit = out.split("-|-"); //internal protocol: status-|-stdout-|-stderr
+    console.info("launch", pathApp, command, args);
+    if(outSplit[0] === "true") {
+        console.info("launch output", outSplit[1]);
+        if(outSplit[2].trim().length > 0) {
+            console.info("launch error", outSplit[2]);
+        }
+    }
+    else {
+        if(outSplit[2].trim().length > 0) {
+            console.info("launch error", outSplit[2]);
+        }
+        throw Error("Can't launch application " + app.name);
     }
 }
 
 async function isInstalled(app) {
-    const aa = await getTargetPath()
-    const bb =  await exists(await getTargetPath() + "/" + app.code, { dir: BaseDirectory.Home });
-    console.log(bb);
-    return bb;
+    const pathVersion = await getTargetPath() + '/' + app.code + ".version";
+    const isInstalled = await invoke("is_path_exist", { path: pathVersion });
+    console.info("isInstalled", pathVersion, isInstalled);
+    return isInstalled;
 }  
 
 async function remove(app) {
-    console.info("remove", app.code,
-        await removeDir(await getTargetPath() + "/" + app.code, { dir: BaseDirectory.Home }));
+    const pathVersion = await getTargetPath() + '/' + app.code + ".version";
+    const pathApp     = await getTargetPath() + '/' + app.code;
+    if(await invoke("delete_dir",  { path: pathApp     })
+    && await invoke("delete_file", { path: pathVersion })) {
+        console.info("remove", pathVersion, pathApp);
+        return true;
+    } else {
+        console.error("remove", pathVersion, pathApp);
+        return false;
+    }
 }  
 
 export {
-    install     as installApplication,
-    isInstalled as isApplicationInstalled, 
-    open        as openApplication,
-    remove      as removeApplication
+    getUrlContentJson  as getUrlContentJson,
+    getAppsUrl         as getApplicationsUrl, 
+    install            as installApplication,
+    isInstalled        as isApplicationInstalled, 
+    open               as openApplication,
+    remove             as removeApplication
   };

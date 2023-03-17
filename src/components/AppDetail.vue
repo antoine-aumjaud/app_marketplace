@@ -24,8 +24,8 @@ function deleteApp() {
   <br>
   <div>
     <button @click="openApp">Open</button> 
-    <button @click="deleteApp">Delete</button>
-    <a :href="app.documentationUrl" target="_blank">
+    <button v-if="app.isInstalled" @click="deleteApp">Delete</button>
+    <a v-if="app.documentationUrl" :href="app.documentationUrl" target="_blank">
       <button>Documentation</button></a> 
   </div>
 </template>

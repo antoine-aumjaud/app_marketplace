@@ -51,7 +51,6 @@ button:active {
   background-color: #e8e8e8;
 }
 
-
 @media (prefers-color-scheme: dark) {
   :root {
     color: #f6f6f6;

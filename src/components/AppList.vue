@@ -39,14 +39,14 @@ function openApp(app) {
         src="../assets/favorite.png" 
         alt="Favorite" />  
     </td>
+    <td class="name" @click="showApp(app)">
+      {{ app.name }}
+    </td>
     <td>
       <img class="open" 
         @click="openApp(app)"
         src="../assets/open.png" 
         alt="Open" /> 
-    </td>
-    <td class="name" @click="showApp(app)">
-      {{ app.name }}
     </td>
   </tr> 
   </table>

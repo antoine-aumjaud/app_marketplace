@@ -1,7 +1,9 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 
-import { installApplication, isApplicationInstalled, openApplication, removeApplication } from './application';
+import { message, confirm } from '@tauri-apps/api/dialog'; //improve default dialog box
+
+import { getUrlContentJson, getApplicationsUrl, installApplication, isApplicationInstalled, openApplication, removeApplication } from './application';
 
 import AppList   from "./components/AppList.vue";
 import AppDetail from './components/AppDetail.vue';
@@ -10,10 +12,12 @@ import AppDetail from './components/AppDetail.vue';
 const apps = ref({})
 async function initApps() {
   console.debug("init apps");
-  const appsJson = await (await fetch("/apps.json")).json();
+  const appsUrl = await getApplicationsUrl();
+  console.debug("with URL", appsUrl);
+  const appsJson = await getUrlContentJson(appsUrl);
   for(const entity of Object.values(appsJson).filter(entity => entity.appsUrl != null)) {
     try {
-      entity.apps = await (await fetch(entity.appsUrl)).json();
+      entity.apps = await getUrlContentJson(entity.appsUrl);
     }
     catch(e) {
       console.error("Can't load " + entity.appsUrl, e);
@@ -98,31 +102,42 @@ function computeApps() {
 
 //app
 const selectedApp = ref();
-function showApp(app) {
+async function showApp(app) {
+  app.isInstalled = await isApplicationInstalled(app); 
   selectedApp.value = app;
 }
 async function openApp(app) {
+  let openTheApp=false;
   const isInstalled = await installApplication(apps, app);
+  
   if(!isInstalled) {
-    if(await isApplicationInstalled(app)) {
-      const confirmed = await confirm("Installation failed, do you want to run the previous installation?");
-      if(confirmed) {
-        await openApplication(app);
-      }
+    if(await isApplicationInstalled(app)) { //application has a previous installation
+        openTheApp = await confirm("Installation failed!\nDo you want to run the previous installation?", { title: 'Open application', type: 'warning' });
     }
   } 
   else {
-    await openApplication(app);
+    openTheApp = true;
+  }
+  if(openTheApp) {
+    try {
+      await openApplication(app);
+    }
+    catch(e) {
+      await message(e, { title: 'Open application', type: 'error' });
+    }
   }
 }
 async function deleteApp(app) {
-  const isInstalled = await isApplicationInstalled(app);
-  if(isInstalled) {
-    const confirmed = await confirm('Are you sure you want to remove this application?', { title: 'Validation' });
-    if(confirmed) {
-      await removeApplication(app);
+  const confirmed = await confirm('Are you sure you want to remove this application?', { title: 'Validation' });
+  if(confirmed) {
+    if(await removeApplication(app)) {
+      await showApp(app);
     }
   }
+}
+
+function focusOnSearch() {
+  searchInput.focus();
 }
 
 //init
@@ -132,6 +147,8 @@ onMounted(async () => {
   initProduction();
   initFavorites();
   computeApps();
+
+  focusOnSearch();
 });
 </script>
 
@@ -149,7 +166,7 @@ onMounted(async () => {
       </div>
 
       <div class="col search">
-        <input id="searchInput" v-model="searchFilter" placeholder="Filter by name" @input="computeApps">
+        <input id="searchInput" ref="searchInput" v-model="searchFilter" placeholder="Filter by name" @input="computeApps">
       </div>
 
       <div class="col">
