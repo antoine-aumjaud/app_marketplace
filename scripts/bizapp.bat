@@ -17,12 +17,12 @@ echo -- Create path %TARGET_PATH%
 mkdir %TARGET_PATH% > nul 2>&1
 mkdir %APPS_PATH% > nul 2>&1
 echo -- Get batch file
-curl --failed -ksS -o %TARGET_PATH%\bizapp.bat %BAT_URL%
+curl --fail -ksS -o %TARGET_PATH%\bizapp.bat %BAT_URL%
 if %errorlevel% neq 0 (goto error)
 echo -- Get binary and version
-curl --failed -ksS -o %TARGET_PATH%\bizapp.exe %BIN_URL%
+curl --fail -ksS -o %TARGET_PATH%\bizapp.exe %BIN_URL%
 if %errorlevel% neq 0 (goto error)
-curl --failed -ksS -o %TARGET_PATH%\bizapp.version %BIN_VERSION_URL%
+curl --fail -ksS -o %TARGET_PATH%\bizapp.version %BIN_VERSION_URL%
 if %errorlevel% neq 0 (goto error)
 goto add_icon
 
