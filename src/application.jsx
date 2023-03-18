@@ -51,38 +51,41 @@ async function getUrlContentJson(url) {
 
 async function install(apps, targetApp) {
     const appsToInstall = await getAppToInstall(apps, targetApp);
-    console.debug("Apps to install", appsToInstall);
+    console.debug("Apps to install", appsToInstall.filter(a => a.doInstallation));
     const vars = {};
     for(const app of appsToInstall) {
-        console.info("Install app", app.name, "with installer", app.installUri);
-        if(!app.installUri.endsWith(".bat")) {
-            throw Error("Can't install application, only bat file are managed", app.installUri);
+        const appPath = await getTargetPath() + '\\' + app.code;
+        if(app.doInstallation) {
+            console.info("Install app", app.name, "with installer", app.installUri);
+            if(!app.installUri.endsWith(".bat")) {
+                throw Error("Can't install application, only bat file are managed", app.installUri);
+            }
+            const remoteVersion        = await getUriContent(app.versionUri);
+            const installScriptContent = await getUriContent(app.installUri);
+            const installScriptPath    = appPath + "_install.bat";
+            const appVersionPath       = appPath + ".version";
+            const scriptSaveMessage    = await invoke("save_local_file_content", {path: installScriptPath, content: installScriptContent} );
+            if(scriptSaveMessage !== "true") {
+                throw Error("Can't save installation script to file", installScriptPath, "error: " + scriptSaveMessage)
+            }
+            try {
+                vars["APP_PATH"] = appPath;
+                vars["ENV"] = app.env;
+                await launch(await getTargetPath(), installScriptPath, vars);
+            }
+            catch(e) {
+                throw Error("Can't install application " + app.name + ", message: " + e);
+            }
+            if(!await invoke("is_path_exist", { path: appPath })) { //create dir in case of installation is somewhere else
+                await invoke("create_dir", { path: appPath }); 
+                console.warn("Installation in another folder, the application could not be UN-installed.");
+            }
+            const versionSaveMessage = await invoke("save_local_file_content", {path: appVersionPath, content: remoteVersion});
+            if(versionSaveMessage !== "true") {
+                throw Error("Can't save version to file", appVersionPath)
+            }
         }
-        const remoteVersion        = await getUriContent(app.versionUri);
-        const installScriptContent = await getUriContent(app.installUri);
-        const installScriptPath    = await getTargetPath() + '/' + app.code + "_install.bat";
-        const appPath              = await getTargetPath() + '/' + app.code;
-        const appVersionPath       = await getTargetPath() + '/' + app.code + ".version";
-        const scriptSaveMessage    = await invoke("save_local_file_content", {path: installScriptPath, content: installScriptContent} );
-        if(scriptSaveMessage !== "true") {
-            throw Error("Can't save installation script to file", installScriptPath, "error: " + scriptSaveMessage)
-        }
-        try {
-            vars["APP_PATH"] = appPath;
-            await launch(await getTargetPath(), installScriptPath, vars);
-        }
-        catch(e) {
-            throw Error("Can't install application " + app.name + ", message: " + e);
-        }
-        if(!await invoke("is_path_exist", { path: appPath })) { //create dir in case of installation is somewhere else
-            await invoke("create_dir", { path: appPath }); 
-            console.warn("Installation in another folder, the application could not be UN-installed.");
-        }
-        const versionSaveMessage = await invoke("save_local_file_content", {path: appVersionPath, content: remoteVersion});
-        if(versionSaveMessage !== "true") {
-            throw Error("Can't save version to file", appVersionPath)
-        }
-        vars[app.code.toUpperCase() + "_HOME"] = appPath;
+        vars["HOME_" + app.code.toUpperCase()] = appPath;
     }
 }
 async function getAppToInstall(apps, app) {
@@ -102,15 +105,15 @@ async function getAppToInstall(apps, app) {
         }
         //check app
         if(await isInstalled(app)) {
-            const pathVersion = await getTargetPath() + '/' + app.code + ".version";
+            const pathVersion   = await getTargetPath() + '\\' + app.code + ".version";
             const localVersion  = await invoke("get_local_file_content", { path: pathVersion} );
             const remoteVersion = await getUriContent(app.versionUri);
             console.debug(`App '${app.code}': versions ${localVersion}/${remoteVersion}`);
-            if(remoteVersion != localVersion) {
-                appsToInstall.push(app);
-            } 
+            app.doInstallation = remoteVersion != localVersion;
+            appsToInstall.push(app);
         } 
         else {
+            app.doInstallation = true;
             appsToInstall.push(app);
         }
         return appsToInstall;
@@ -122,8 +125,8 @@ async function getAppToInstall(apps, app) {
 }
 
 async function open(app) {
-    const path = await getTargetPath() + '/' + app.code;
-    const command = app.launchCommand;
+    const path = await getTargetPath() + '\\' + app.code;
+    const command = path + '\\' + app.launchCommand;
     try {
         await launch(path, command, {});
     }
@@ -155,16 +158,16 @@ async function launch(path, launchCommand, vars) {
 }
 
 async function isInstalled(app) {
-    const pathVersion = await getTargetPath() + '/' + app.code + ".version";
+    const pathVersion = await getTargetPath() + '\\' + app.code + ".version";
     const isInstalled = await invoke("is_path_exist", { path: pathVersion });
     console.info("isInstalled", pathVersion, isInstalled);
     return isInstalled;
 }  
 
 async function remove(app) {
-    const pathVersion = await getTargetPath() + '/' + app.code + ".version";
-    const pathApp     = await getTargetPath() + '/' + app.code;
-    const scriptPath  = await getTargetPath() + '/' + app.code + "_install.bat";
+    const pathVersion = await getTargetPath() + '\\' + app.code + ".version";
+    const pathApp     = await getTargetPath() + '\\' + app.code;
+    const scriptPath  = await getTargetPath() + '\\' + app.code + "_install.bat";
     if(await invoke("delete_dir",  { path: pathApp     })
     && await invoke("delete_file", { path: pathVersion })
     && await invoke("delete_file", { path: scriptPath  })) {
