@@ -144,6 +144,7 @@ function focusOnSearch() {
 
 //init
 onMounted(async () => {
+  console.debug("init start", new Date());
   await initApps();
   initEntity();
   initProduction();
@@ -151,6 +152,7 @@ onMounted(async () => {
   computeApps();
 
   focusOnSearch();
+  console.debug("init stop", new Date());
 });
 </script>
 

@@ -36,8 +36,8 @@ fn get_url_content(url: String) -> String {
             Err(ureq::Error::Status(code, response)) => {
                 format!("{}-|-{}", code, response.into_string().unwrap())
             }
-            Err(_) => { 
-                "500-|-network issue".to_string()
+            Err(error) => { 
+                format!("500-|-{}", error.to_string())
             }
         };
 }
@@ -83,7 +83,7 @@ fn create_dir(path: String) -> bool {
 }
 
 #[tauri::command]
-fn launch(path: String, command: String, args: Vec<String>, vars: HashMap<String, String>) -> String {
+fn launch_install(path: String, command: String, args: Vec<String>, vars: HashMap<String, String>) -> String {
     return match Command::new(command)
         .args(args)
         .current_dir(path)
@@ -101,12 +101,26 @@ fn launch(path: String, command: String, args: Vec<String>, vars: HashMap<String
         };
 }
 
+#[tauri::command]
+fn launch_open(path: String, command: String, args: Vec<String>, vars: HashMap<String, String>) -> String {
+    return match Command::new(command)
+        .args(args)
+        .current_dir(path)
+        .envs(vars)
+        .spawn() { //do not wait for status and outputs
+            Ok(_) => "true-|- -|- ".to_string(),
+            Err(error) => format!("false-|- -|-{}", error.to_string()) 
+        };
+}
 fn main() {
     if env::var("APPS_PATH").is_err() {
         panic!("Missing APPS_PATH: path to apps folder installation, use icon in Start Menu to launch this application");
     }
     if env::var("APPS_URL").is_err() {
         panic!("Missing APPS_URL: URL to apps list, use icon in Start Menu to launch this application");
+    }
+    if !is_path_exist(env::var("APPS_PATH").unwrap()) {
+        panic!("Apps Path (APPS_PATH) doesn't exist, use icon in Start Menu to launch this application");
     }
 
     println!("Works with {}\n in {}",
@@ -120,7 +134,8 @@ fn main() {
             get_url_content, get_local_file_content, save_local_file_content,
             is_path_exist, 
             delete_file, delete_dir, create_dir,
-            launch])
+            launch_install, launch_open
+        ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

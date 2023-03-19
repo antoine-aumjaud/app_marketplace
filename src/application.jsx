@@ -50,11 +50,12 @@ async function getUrlContentJson(url) {
 }
 
 async function install(apps, targetApp) {
-    const appsToInstall = await getAppToInstall(apps, targetApp);
+    const appsToInstall = await getAppsToInstall(apps, targetApp);
     console.debug("Apps to install", appsToInstall.filter(a => a.doInstallation));
     const vars = {};
+    const targetPath = await getTargetPath();
     for(const app of appsToInstall) {
-        const appPath = await getTargetPath() + '\\' + app.code;
+        const appPath = targetPath + '\\' + app.code;
         if(app.doInstallation) {
             console.info("Install app", app.name, "with installer", app.installUri);
             if(!app.installUri.endsWith(".bat")) {
@@ -70,8 +71,8 @@ async function install(apps, targetApp) {
             }
             try {
                 vars["APP_PATH"] = appPath;
-                vars["ENV"] = app.env;
-                await launch(await getTargetPath(), installScriptPath, vars);
+                if(app.env) vars["ENV"] = app.env;
+                await launch("install", targetPath, installScriptPath, vars);
             }
             catch(e) {
                 throw Error("Can't install application " + app.name + ", message: " + e);
@@ -88,7 +89,7 @@ async function install(apps, targetApp) {
         vars["HOME_" + app.code.toUpperCase()] = appPath;
     }
 }
-async function getAppToInstall(apps, app) {
+async function getAppsToInstall(apps, app) {
     try {  
         let appsToInstall = [];
         //check tools
@@ -99,7 +100,7 @@ async function getAppToInstall(apps, app) {
             const depApp = apps.value[depType].apps.find(t => t.code === depCode);
             if(!depApp) log.error("Dependency App not found: " + dep)
             else {
-                const depsAppToInstall = await getAppToInstall(apps, depApp);
+                const depsAppToInstall = await getAppsToInstall(apps, depApp);
                 appsToInstall = appsToInstall.concat(depsAppToInstall);
             }
         }
@@ -128,14 +129,14 @@ async function open(app) {
     const path = await getTargetPath() + '\\' + app.code;
     const command = path + '\\' + app.launchCommand;
     try {
-        await launch(path, command, {});
+        await launch("open", path, command, {});
     }
     catch(e) {
         throw Error("Can't open application " + app.name);
     }
 }
 
-async function launch(path, launchCommand, vars) {
+async function launch(launchType, path, launchCommand, vars) {
     let args = [];
     let command = launchCommand;
     if(command.includes(" ")) {
@@ -147,7 +148,7 @@ async function launch(path, launchCommand, vars) {
         command = "cmd";
         args = ["/c", launchCommand]; //all args in first arg
     }
-    const out = await invoke("launch", { path: path, command: command, args: args, vars: vars });
+    const out = await invoke("launch_" + launchType, { path: path, command: command, args: args, vars: vars });
     const outSplit = out.split("-|-"); //internal protocol: status-|-stdout-|-stderr
     console.info("launch", path, command, args, vars);
     if(outSplit[1].trim().length > 0) console.info("launch output: ",       outSplit[1]);
