@@ -28,7 +28,16 @@ fn get_apps_url() -> String {
 
 #[tauri::command]
 fn get_url_content(url: String) -> String {
-    return match ureq::get(&url)
+    /* let mut root_store = rustls::RootCertStore::empty();
+    root_store.add_server_trust_anchors(webpki_roots::TLS_SERVER_ROOTS.0.iter()
+            .map(|ta| { rustls::OwnedTrustAnchor::from_subject_spki_name_constraints(ta.subject, ta.spki, ta.name_constraints) }) );*/
+    let tls_config = rustls::ClientConfig::builder()
+        .with_safe_defaults()
+        //.with_root_certificates(root_store)
+        .with_custom_certificate_verifier(SkipServerVerification::new())
+        .with_no_client_auth();
+    let agent = ureq::builder().tls_config(std::sync::Arc::new(tls_config)).build();
+    return match agent.get(&url)
         .call() {
             Ok(response) => { 
                 format!("{}-|-{}", response.status(), response.into_string().unwrap()) 
@@ -138,4 +147,26 @@ fn main() {
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
+}
+
+
+// structs
+struct SkipServerVerification;
+impl SkipServerVerification {
+    fn new() -> std::sync::Arc::<Self> {
+        std::sync::Arc::new(Self)
+    }
+}
+impl rustls::client::ServerCertVerifier for SkipServerVerification {
+    fn verify_server_cert(
+        &self,
+        _end_entity: &rustls::Certificate,
+        _intermediates: &[rustls::Certificate],
+        _server_name: &rustls::ServerName,
+        _scts: &mut dyn Iterator<Item = &[u8]>,
+        _ocsp_response: &[u8],
+        _now: std::time::SystemTime,
+    ) -> Result<rustls::client::ServerCertVerified, rustls::Error> {
+        Ok(rustls::client::ServerCertVerified::assertion())
+    }
 }

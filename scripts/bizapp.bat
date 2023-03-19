@@ -6,7 +6,7 @@ set BIN_URL=file:///c:/Users/antoi/prog/bizapp/src-tauri/target/release/bizapp.e
 set BAT_URL=file:///c:/Users/antoi/prog/bizapp/script/bizapp.bat
 set BIN_VERSION_URL=file:///c:/Users/antoi/prog/bizapp/src-tauri/target/bizapp.version
 
-set APPS_URL="apps.json"
+set APPS_URL=apps.json
 set APPS_PATH=%USERPROFILE%\bin\bizapp\apps
 
 :check_bin

@@ -21,10 +21,11 @@ npm run tauri dev
 ```
 
 ## TODO
-- [ ] Manage Double Click, revue select
-- [ ] UI: Add keyboard shortcuts
+- [ ] Async launch install
+- [ ] Manage Double Click
+- [ ] UI: Add keyboard shortcuts (up and down, launch app, opend docu + help menu)
 - [ ] UI: Filter Favorites change to icon
-- [ ] UI: Filter Production change to icon
 - [ ] UI: Filter Production change to icon
 - [ ] Install: add shortcut on links
 - [ ] Launch SelectedApp: if urlVersion.lock => WAIT
+- [ ] Certificate validation
