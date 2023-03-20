@@ -1,7 +1,7 @@
 <script setup>
 const props = defineProps({
   app: Object,
-})
+});
 
 const emit = defineEmits(['openApp', 'deleteApp']);
 

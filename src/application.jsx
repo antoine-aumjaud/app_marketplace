@@ -17,7 +17,7 @@ async function getUriContent(uri) {
         const path = uri.replaceAll("file:///", "");
         const content = await invoke("get_local_file_content", {path: path});
         if(content.startsWith("error")) { 
-            throw Error("Can't get file " + path + ", error: " + content);
+            throw new Error("Can't get file " + path + ", error: " + content);
         }
         return content;
     }
@@ -26,14 +26,14 @@ async function getUriContent(uri) {
         const contentSplit = content.split("-|-"); //custom protocol: status-|-content
         const status = parseInt(contentSplit[0]);
         if(!(status >= 200 && status < 300)) { 
-            throw Error("Can't get URL content, code: " + contentSplit[0] + ", message: " + contentSplit[1]);
+            throw new Error("Can't get URL content, code: " + contentSplit[0] + ", message: " + contentSplit[1]);
         }
         return contentSplit[1];
     }
     else {
         const response = await fetch(uri);
         if(!response.ok) {
-            throw Error("Can't get URL content, code: " + response.status + ", message: " +  + await response.text());
+            throw new Error("Can't get URL content, code: " + response.status + ", message: " +  + await response.text());
         }
         return await response.text();
     }
@@ -49,7 +49,7 @@ async function getUrlContentJson(url) {
     }
 }
 
-async function install(apps, targetApp) {
+async function install(apps, targetApp, logsInfo) {
     const appsToInstall = await getAppsToInstall(apps, targetApp);
     console.debug("Apps to install", appsToInstall.filter(a => a.doInstallation));
     const vars = {};
@@ -58,24 +58,55 @@ async function install(apps, targetApp) {
         const appPath = targetPath + '\\' + app.code;
         if(app.doInstallation) {
             console.info("Install app", app.name, "with installer", app.installUri);
+            logsInfo.value.title = "Install app: " + app.name;
+            logsInfo.value.cancel = false;
             if(!app.installUri.endsWith(".bat")) {
-                throw Error("Can't install application, only bat file are managed", app.installUri);
+                throw new Error("Can't install application, only bat file are managed", app.installUri);
             }
             const remoteVersion        = await getUriContent(app.versionUri);
             const installScriptContent = await getUriContent(app.installUri);
             const installScriptPath    = appPath + "_install.bat";
+            const installScriptPathWrp = appPath + "_install_wrapper.bat";
             const appVersionPath       = appPath + ".version";
             const scriptSaveMessage    = await invoke("save_local_file_content", {path: installScriptPath, content: installScriptContent} );
             if(scriptSaveMessage !== "true") {
-                throw Error("Can't save installation script to file", installScriptPath, "error: " + scriptSaveMessage)
+                throw new Error("Can't save installation script to file", installScriptPath, "error: " + scriptSaveMessage)
             }
             try {
                 vars["APP_PATH"] = appPath;
                 if(app.env) vars["ENV"] = app.env;
-                await launch("install", targetPath, installScriptPath, vars);
+                const installScriptWrapperContent = `del ${installScriptPath}.status > nul 2>&1 \ncall ${installScriptPath} > ${installScriptPath}.log 2>&1 \nset RET=%ERRORLEVEL% \necho %RET% > ${installScriptPath}.status \nexit /B %RET%` 
+                const scriptWrapperSaveMessage = await invoke("save_local_file_content", {path: installScriptPathWrp, content: installScriptWrapperContent} );
+                if(scriptWrapperSaveMessage !== "true") {
+                    throw new Error("Can't save installation script wrapper to file", installScriptPathWrp, "error: " + scriptWrapperSaveMessage)
+                }
+                const pid = await launch(targetPath, installScriptPathWrp, vars);
+                while(true) {
+                    const status  = await invoke("get_local_file_content", { path: installScriptPath + ".status" } );
+                    const out     = await invoke("get_local_file_content", { path: installScriptPath + ".log" } );
+                    if(!out.startsWith("error")) { 
+                        logsInfo.value.output = out;
+                    }
+                    if(status.startsWith("error")) { //file status doesn't exist => process is not finished 
+                        if(logsInfo.value.cancel) {
+                            console.warn("installation cancelled by user");
+                            await invoke("kill_process", { pid: pid } );
+                            throw new Error("installation cancelled by user");
+                        }
+                        else {
+                            await sleep(1000); 
+                            continue; 
+                        }
+                    };
+                    console.debug("- installation status: " + status + " final stdout: ", out);
+                    if(status.trim() != "0") {
+                        throw new Error("installation script error, status=" + status); 
+                    }
+                    break;
+                }
             }
             catch(e) {
-                throw Error("Can't install application " + app.name + ", message: " + e);
+                throw new Error("Can't install application " + app.name + ", message: " + e);
             }
             if(!await invoke("is_path_exist", { path: appPath })) { //create dir in case of installation is somewhere else
                 await invoke("create_dir", { path: appPath }); 
@@ -83,7 +114,7 @@ async function install(apps, targetApp) {
             }
             const versionSaveMessage = await invoke("save_local_file_content", {path: appVersionPath, content: remoteVersion});
             if(versionSaveMessage !== "true") {
-                throw Error("Can't save version to file", appVersionPath)
+                throw new Error("Can't save version to file", appVersionPath)
             }
         }
         vars["HOME_" + app.code.toUpperCase()] = appPath;
@@ -109,7 +140,7 @@ async function getAppsToInstall(apps, app) {
             const pathVersion   = await getTargetPath() + '\\' + app.code + ".version";
             const localVersion  = await invoke("get_local_file_content", { path: pathVersion} );
             const remoteVersion = await getUriContent(app.versionUri);
-            console.debug(`App '${app.code}': versions ${localVersion}/${remoteVersion}`);
+            console.debug(`App '${app.code}': versions local/remote`, localVersion, remoteVersion);
             app.doInstallation = remoteVersion != localVersion;
             appsToInstall.push(app);
         } 
@@ -128,15 +159,17 @@ async function getAppsToInstall(apps, app) {
 async function open(app) {
     const path = await getTargetPath() + '\\' + app.code;
     const command = path + '\\' + app.launchCommand;
+    console.info("Launch app", app.name, "with command:", command);
+
     try {
-        await launch("open", path, command, {});
+        await launch(path, command, {});
     }
     catch(e) {
-        throw Error("Can't open application " + app.name);
+        throw new Error("Can't open application " + app.name);
     }
 }
 
-async function launch(launchType, path, launchCommand, vars) {
+async function launch(path, launchCommand, vars) {
     let args = [];
     let command = launchCommand;
     if(command.includes(" ")) {
@@ -144,18 +177,18 @@ async function launch(launchType, path, launchCommand, vars) {
         command = commandSplit[0];
         args = commandSplit.slice(1);
     }
+    const outputFile = command + ".log"
     if(command.endsWith(".bat") || command.endsWith(".cmd")) {
         command = "cmd";
         args = ["/c", launchCommand]; //all args in first arg
     }
-    const out = await invoke("launch_" + launchType, { path: path, command: command, args: args, vars: vars });
-    const outSplit = out.split("-|-"); //internal protocol: status-|-stdout-|-stderr
-    console.info("launch", path, command, args, vars);
-    if(outSplit[1].trim().length > 0) console.info("launch output: ",       outSplit[1]);
-    if(outSplit[2].trim().length > 0) console.info("launch error output: ", outSplit[2]);
-    if(outSplit[0] !== "true") { 
-        throw Error("Can't launch " + launchCommand);
+    console.debug("- launch command:", command, args, vars);
+    const pid = await invoke("launch_process", { path: path, command: command, args: args, vars: vars, outputFile: outputFile });
+    console.debug("- launch pid:", pid, "output: ", await invoke("get_local_file_content", { path: command + ".log" } ));
+    if(pid.startsWith("error")){ 
+        throw new Error("Can't launch " + launchCommand + ", " + pid);
     }
+    return pid;
 }
 
 async function isInstalled(app) {
@@ -166,16 +199,23 @@ async function isInstalled(app) {
 }  
 
 async function remove(app) {
-    const pathVersion = await getTargetPath() + '\\' + app.code + ".version";
-    const pathApp     = await getTargetPath() + '\\' + app.code;
-    const scriptPath  = await getTargetPath() + '\\' + app.code + "_install.bat";
-    if(await invoke("delete_dir",  { path: pathApp     })
-    && await invoke("delete_file", { path: pathVersion })
-    && await invoke("delete_file", { path: scriptPath  })) {
-            console.info("remove", pathVersion, pathApp);
+    const pathApp                 = await getTargetPath() + '\\' + app.code;
+    const pathVersion             = await getTargetPath() + '\\' + app.code + ".version";
+    const scriptPath              = await getTargetPath() + '\\' + app.code + "_install.bat";
+    const scriptStatusPath        = await getTargetPath() + '\\' + app.code + "_install.bat.status";
+    const scriptLogPath           = await getTargetPath() + '\\' + app.code + "_install.bat.log";
+    const scriptWrapperPath       = await getTargetPath() + '\\' + app.code + "_install_wrapper.bat";
+    if(await invoke("delete_dir",  { path: pathApp     })) {
+        await invoke("delete_file", { path: pathVersion });
+        await invoke("delete_file", { path: scriptPath });
+        await invoke("delete_file", { path: scriptStatusPath });
+        await invoke("delete_file", { path: scriptLogPath });
+        await invoke("delete_file", { path: scriptWrapperPath });
+        console.info("remove", pathVersion, pathApp, scriptPath);
         return true;
-    } else {
-        console.error("remove", pathVersion, pathApp);
+    } 
+    else {
+        console.error("remove", pathVersion, pathApp, scriptPath);
         return false;
     }
 }  
@@ -187,4 +227,8 @@ export {
     isInstalled        as isApplicationInstalled, 
     open               as openApplication,
     remove             as removeApplication
-  };
+};
+
+async function sleep(msec) {
+    return new Promise(resolve => setTimeout(resolve, msec));
+}

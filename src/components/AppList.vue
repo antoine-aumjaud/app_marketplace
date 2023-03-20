@@ -2,7 +2,7 @@
 const props = defineProps({
   apps: Array,
   favorites: Array,
-})
+});
 
 const emit = defineEmits(['changeFavorites', 'showApp', 'openApp']);
 

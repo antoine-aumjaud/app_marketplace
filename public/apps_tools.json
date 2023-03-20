@@ -8,7 +8,7 @@
         "isProduction": false,
         "installUri": "/src/assets/test_install.bat",
         "versionUri": "/src/assets/test_version.txt",
-        "launchCommand": "launcher.exe"
+        "launchCommand": "launch.bat"
     },
     {
         "code": "rclone",

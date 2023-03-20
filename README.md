@@ -15,17 +15,24 @@
 ## Test
 ```sh
 npm install
-export APPS_PATH="$USERPROFILE/bin"
+export APPS_PATH="$HOME/bin"
 export APPS_URL="apps.json"
 npm run tauri dev
 ```
 
 ## TODO
-- [ ] Async launch install
-- [ ] Manage Double Click
-- [ ] UI: Add keyboard shortcuts (up and down, launch app, opend docu + help menu)
-- [ ] UI: Filter Favorites change to icon
-- [ ] UI: Filter Production change to icon
-- [ ] Install: add shortcut on links
-- [ ] Launch SelectedApp: if urlVersion.lock => WAIT
-- [ ] Certificate validation
+- FIXME:
+  - [ ] Kill process when abort installation
+  - [ ] Certificate validation
+
+Enhancements:
+- UI: 
+  - [ ] Manage scroll
+  - [ ] Manage double-click ?
+  - [ ] Add keyboard shortcuts (up and down, launch app, opend docu + help menu)
+  - [ ] Filter Favorites: change to icon
+  - [ ] Filter Production: change to icon
+- BizApp Installation:
+  - [ ] Add keyboard shortcut on links
+- App Installation:
+  - [ ] Launch SelectedApp: if urlVersion.lock => WAIT

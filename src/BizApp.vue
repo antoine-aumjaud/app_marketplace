@@ -7,6 +7,7 @@ import { getUrlContentJson, getApplicationsUrl, installApplication, isApplicatio
 
 import AppList   from "./components/AppList.vue";
 import AppDetail from './components/AppDetail.vue';
+import Log       from './components/Log.vue';
 
 //apps
 const apps = ref({})
@@ -109,7 +110,9 @@ async function showApp(app) {
 async function openApp(app) {
   let openTheApp = false;
   try {
-    await installApplication(apps, app);
+    logsInfo.value = {};
+    await installApplication(apps, app, logsInfo);
+    app.isInstalled = true; 
     openTheApp = true;
   }
   catch(e) {
@@ -120,6 +123,7 @@ async function openApp(app) {
       await message(e, { title: 'Install application', type: 'error' });
     }
   }
+  logsInfo.value = null
   if(openTheApp) {
     try {
       await openApplication(app);
@@ -138,8 +142,10 @@ async function deleteApp(app) {
   }
 }
 
-function focusOnSearch() {
-  searchInput.focus();
+//log
+const logsInfo = ref();
+function cancelLog() {
+  logsInfo.value.cancel = true;
 }
 
 //init
@@ -151,7 +157,7 @@ onMounted(async () => {
   initFavorites();
   computeApps();
 
-  focusOnSearch();
+  searchInput.focus();
   console.debug("init stop", new Date());
 });
 </script>
@@ -160,47 +166,60 @@ onMounted(async () => {
   <div class="container">
     <h1>BizApp: the Business Applications market place!</h1>
 
-    <div class="row">
-      <div class="col">
-        <label for="entitySelect">BU/SU</label>
-        <select id="entitySelect" v-model="entitySelected" @change="selectEntity">
-          <option value="">Select one</option>
-          <option v-for="entity in entities" :value="entity.value">{{ entity.text }}</option>
-        </select>
-      </div>
+    <section v-if="!logsInfo">
+      <div class="row">
+        <div class="col">
+          <label for="entitySelect">BU/SU</label>
+          <select id="entitySelect" v-model="entitySelected" @change="selectEntity">
+            <option value="">Select one</option>
+            <option v-for="entity in entities" :value="entity.value">{{ entity.text }}</option>
+          </select>
+        </div>
 
-      <div class="col search">
-        <input id="searchInput" ref="searchInput" v-model="searchFilter" placeholder="Filter by name" @input="computeApps">
-      </div>
+        <div class="col search">
+          <input id="searchInput" ref="searchInput" v-model="searchFilter" placeholder="Filter by name" @input="computeApps">
+        </div>
 
-      <div class="col">
-        <label for="viewOnlyFavoritesCheckbox">View only favorites</label>
-        <input  id="viewOnlyFavoritesCheckbox"  type="checkbox" v-model="viewOnlyFavorites"  @change="checkViewOnlyFavorites">
-        <label for="viewOnlyProductionCheckbox">View only production</label>
-        <input  id="viewOnlyProductionCheckbox" type="checkbox" v-model="viewOnlyProduction" @change="checkViewOnlyProduction">
+        <div class="col">
+          <label for="viewOnlyFavoritesCheckbox">View only favorites</label>
+          <input  id="viewOnlyFavoritesCheckbox"  type="checkbox" v-model="viewOnlyFavorites"  @change="checkViewOnlyFavorites">
+          <label for="viewOnlyProductionCheckbox">View only production</label>
+          <input  id="viewOnlyProductionCheckbox" type="checkbox" v-model="viewOnlyProduction" @change="checkViewOnlyProduction">
+        </div>
       </div>
-    </div>
-    
-    <hr class="max">
+      
+      <hr class="max">
 
-    <div class="row">
-      <div class="col">
-        <AppList 
-          :apps="computedApps" 
-          :favorites="favorites"
-          @changeFavorites="changeFavorites" 
-          @openApp="openApp"
-          @showApp="showApp"
+      <div class="row">
+        <div class="col">
+          <AppList 
+            :apps="computedApps" 
+            :favorites="favorites"
+            @changeFavorites="changeFavorites" 
+            @openApp="openApp"
+            @showApp="showApp"
+            />
+        </div>
+        <div class="col detail">
+          <AppDetail v-if="selectedApp"
+            :app="selectedApp" 
+            @openApp="openApp"
+            @deleteApp="deleteApp"
           />
+        </div>
       </div>
-      <div class="col detail">
-        <AppDetail v-if="selectedApp"
-          :app="selectedApp" 
-          @openApp="openApp"
-          @deleteApp="deleteApp"
-        />
+    </section>
+
+    <section v-if="logsInfo">
+      <div class="row">
+        <div class="col max">
+          <Log 
+            :info="logsInfo"
+            @cancel="cancelLog"
+          />
+        </div>
       </div>
-    </div>
+    </section>
   </div>
 </template>
 

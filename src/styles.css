@@ -3,17 +3,17 @@
   font-size: 16px;
   line-height: 24px;
   font-weight: 400;
+  font-synthesis: none;
 
   color: #0f0f0f;
   background-color: #f6f6f6;
+  /*overflow: hidden; manage scroll*/
 
-  font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   -webkit-text-size-adjust: 100%;
 }
-
 
 a {
   font-weight: 500;

@@ -8,6 +8,7 @@ use std::path::Path;
 use std::fs;
 use std::env;
 use std::process::Command;
+use std::process::Stdio;
 
 #[tauri::command]
 fn get_target_path() -> String {
@@ -92,35 +93,28 @@ fn create_dir(path: String) -> bool {
 }
 
 #[tauri::command]
-fn launch_install(path: String, command: String, args: Vec<String>, vars: HashMap<String, String>) -> String {
+fn launch_process(path: String, command: String, args: Vec<String>, vars: HashMap<String, String>, output_file: String) -> String {
+    let file_out = fs::File::create(output_file).unwrap();
+    let file_err = file_out.try_clone().unwrap();
+
     return match Command::new(command)
         .args(args)
         .current_dir(path)
         .envs(vars)
-        .output() {
-            Ok(content) => { 
-                format!("{}-|-{}-|-{}", 
-                    content.status.success(), 
-                    String::from_utf8_lossy(&content.stdout), 
-                    String::from_utf8_lossy(&content.stderr))
-            },
-            Err(error) => { 
-                format!("false-|- -|-{}", error.to_string()) 
-            }
+        .stdout(Stdio::from(file_out))
+        .stderr(Stdio::from(file_err))
+        .spawn() { //do not wait for status and outputs
+            Ok(child) =>  child.id().to_string(),
+            Err(error) => format!("error: {}", error.to_string()) 
         };
 }
 
 #[tauri::command]
-fn launch_open(path: String, command: String, args: Vec<String>, vars: HashMap<String, String>) -> String {
-    return match Command::new(command)
-        .args(args)
-        .current_dir(path)
-        .envs(vars)
-        .spawn() { //do not wait for status and outputs
-            Ok(_) => "true-|- -|- ".to_string(),
-            Err(error) => format!("false-|- -|-{}", error.to_string()) 
-        };
+fn kill_process(_pid: String) -> bool {
+    //rustix::process::kill_process(pid).is_ok() //FIXME
+    true
 }
+
 fn main() {
     if env::var("APPS_PATH").is_err() {
         panic!("Missing APPS_PATH: path to apps folder installation, use icon in Start Menu to launch this application");
@@ -143,7 +137,7 @@ fn main() {
             get_url_content, get_local_file_content, save_local_file_content,
             is_path_exist, 
             delete_file, delete_dir, create_dir,
-            launch_install, launch_open
+            launch_process, kill_process
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
