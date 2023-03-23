@@ -2,6 +2,7 @@
 import { ref, computed, onMounted } from 'vue'
 
 import { message, confirm } from '@tauri-apps/api/dialog'; //improve default dialog box
+import { appWindow }        from '@tauri-apps/api/window';
 
 import { getUrlContentJson, getApplicationsUrl, installApplication, isApplicationInstalled, openApplication, removeApplication } from './application';
 
@@ -159,6 +160,8 @@ onMounted(async () => {
 
   searchInput.focus();
   console.debug("init stop", new Date());
+
+  appWindow.show();
 });
 </script>
 

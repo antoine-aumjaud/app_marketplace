@@ -13,6 +13,9 @@
   "tauri": {
     "allowlist": {
       "all": false,
+      "window": {
+        "show": true
+      },
       "dialog": {
         "all": true 
       }
@@ -34,7 +37,8 @@
         "resizable": true,
         "title": "BizApp",
         "width": 800,
-        "height": 600
+        "height": 600,
+        "visible": false
       }
     ]
   }
