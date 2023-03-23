@@ -205,12 +205,14 @@ async function remove(app) {
     const scriptStatusPath        = await getTargetPath() + '\\' + app.code + "_install.bat.status";
     const scriptLogPath           = await getTargetPath() + '\\' + app.code + "_install.bat.log";
     const scriptWrapperPath       = await getTargetPath() + '\\' + app.code + "_install_wrapper.bat";
+    const scriptWrapperLogPath    = await getTargetPath() + '\\' + app.code + "_install_wrapper.bat.log";
     if(await invoke("delete_dir",  { path: pathApp     })) {
         await invoke("delete_file", { path: pathVersion });
         await invoke("delete_file", { path: scriptPath });
         await invoke("delete_file", { path: scriptStatusPath });
         await invoke("delete_file", { path: scriptLogPath });
         await invoke("delete_file", { path: scriptWrapperPath });
+        await invoke("delete_file", { path: scriptWrapperLogPath });
         console.info("remove", pathVersion, pathApp, scriptPath);
         return true;
     } 
